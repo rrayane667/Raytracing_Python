@@ -42,6 +42,8 @@ def addVect(u, v):
 def multiVect(u, x):
     return [u[0]*x, u[1]*x, u[2]*x]
 
+
+
 def linearInterpolation( a, b, t):
     return addVect(multiVect(a,(1-t)) ,multiVect(b,t))
 
@@ -62,7 +64,7 @@ for i in range(WIDTH):
             v = [c[0] + s[1]*dir[0], c[1] + s[1]*dir[1], -s[1]*dir[2]]
             n = Normalize(v)
             v = multiVect(n, r)
-            l = Normalize(diffVect(v,multiVect(Normalize([1/12, 0,-1]), r + 20) ))
+            l = Normalize(diffVect(v,multiVect(Normalize([1/8, 0,-1]), r + 40) ))
             cam = Normalize(diffVect(v, c))
             h = Normalize(addVect(l, cam))
             spe = scalaire(n, h)**100

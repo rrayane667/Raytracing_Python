@@ -7,7 +7,7 @@ white = (255, 255, 255)
 black = (0, 0, 0)
 indigo = (75,0,130)
 red = (255, 0, 0)
-c = [0, 0, -1300]
+
 
 class light:
     def __init__(self, lightType, lightIntensity, lightPosition, innerRadiusAngle, outerRadiusAngle, direction):
@@ -51,6 +51,10 @@ def linearInterpolation( a, b, t):
 
 def norm(u):
     return sqrt(u[0]**2 + u[1]**2 + u[2]**2)
+
+def sym(X, N):
+    scal = scalaire(X, N)
+    return [(X[i] - 2*scal*N[i]) for i in range(len(X)) ]
 
 def isInsideSphere(c, d, r):
     delta = sum([2*c[i]*d[i] for i in range(3)])**2 - 4*sum([i**2 for i in d])*(sum([i**2 for i in c]) - r**2)
@@ -98,34 +102,45 @@ def BRDF(F0, N, H, V, L, roughness, c):
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
+c = [0, 0, -1000]
 F0 = [0.9]*3
 r=300
 roughness = 0.1
-intensité_lum = 12000
-light_pos = multiVect(Normalize([1/4, -1/12, -1]), 700)
+intensité_lum = 16000
+light_pos = multiVect(Normalize([0, -1/12, -1]), 600)
+hauteur =  r+20
 for i in range(WIDTH):
     for j in range(HEIGHT):
-        dir = Normalize([i - WIDTH/2, j - HEIGHT/2, -500+1300])
+        dir = Normalize([i - WIDTH/2, j - HEIGHT/2, -500-c[2]])
         
         # plane rendering
-        planInterRay = isInsidePlane(c, dir, r+20) # coord intersection entre plan et rayon incidant
+        planInterRay = isInsidePlane(c, dir,  r+20) # coord intersection entre plan et rayon incidant
         vert_pos = planInterRay[1]
         if planInterRay[0]:
             #shadows
             s = isInsideSphere(planInterRay[1], Normalize(diffVect(vert_pos, light_pos)), r)
             if not s[0]:
-                colorTest = indigo
+
+                
+
+                colorTest = black
                 pvDotpl = 0
                 #calcul reflection
                 s = isInsideSphere(planInterRay[1], [dir[0], -dir[1], dir[2]], r)
                 if s[0]:
-                    colorTest = indigo
-                    p = [c[0] + s[1]*dir[0], c[1] + s[1]*dir[1], c[2]+s[1]*dir[2]]
-
-                    pvDotpl = scalaire(Normalize(diffVect(p,vert_pos)),Normalize(diffVect(p,light_pos)))
-                    #vcDotvp = scalaire(Normalize(diffVect(vert_pos, c)),Normalize(diffVect( vert_pos,p)))
-
-                    colorTest = multiVect(colorTest, pvDotpl)
+                    vert_pos_sphere = [c[0] + s[1]*dir[0], c[1] + s[1]*dir[1], -s[1]*dir[2]]
+                    n = Normalize(vert_pos_sphere)
+                    vert_pos = multiVect(n, r)
+                    dist_light = norm(diffVect(vert_pos_sphere,light_pos ))
+                    l = Normalize(diffVect(vert_pos_sphere,light_pos ))
+                    viewVect = Normalize(diffVect(vert_pos_sphere, vert_pos))
+                    h = Normalize(addVect(l, viewVect))
+                    color = multiVect(croi(BRDF(F0, n, h, viewVect, l, roughness, indigo), [intensité_lum*255/(dist_light)**2]*3),scalaire(n,l))
+                    colorTest = [min(255, color[i]) for i in range(3)]
+                #colorTest = indigo
+                
+                #vcDotvp = scalaire(Normalize(diffVect(vert_pos, c)),Normalize(diffVect( vert_pos,p)))
+                #colorTest = multiVect(colorTest, pvDotpl)
 
                     #screen.set_at((i, j), colorTest)
 
@@ -140,11 +155,11 @@ for i in range(WIDTH):
                 color = multiVect(croi(BRDF(F0, n, h, viewVect, l, roughness, white), [intensité_lum*255/(dist_light)**2]*3),scalaire(n,l))
                 color = [min(255, color[i]) for i in range(3)]
 
-                screen.set_at((i, j), linearInterpolation(color, colorTest, pvDotpl))
+                screen.set_at((i, j), [min(255, i) for i in addVect(color, colorTest)])
 
 
         #sphere rendering
-        s = isInsideSphere([0, 0, -1300], dir, r)
+        s = isInsideSphere(c, dir, r)
         if s[0] :
             vert_pos = [c[0] + s[1]*dir[0], c[1] + s[1]*dir[1], -s[1]*dir[2]]
             n = Normalize(vert_pos)
@@ -156,7 +171,38 @@ for i in range(WIDTH):
             color = multiVect(croi(BRDF(F0, n, h, viewVect, l, roughness, indigo), [intensité_lum*255/(dist_light)**2]*3),scalaire(n,l))
             colorSphere = [min(255, color[i]) for i in range(3)]
 
-            screen.set_at((i, j), colorSphere)
+            rayon_reflechi = Normalize(sym(dir, n))
+            insidePlane = isInsidePlane(vert_pos, rayon_reflechi, hauteur)
+            planeVert = insidePlane[1]
+            t=0
+            colorReflechi = [0]*3
+
+            if insidePlane[0]:
+                t=1/2
+                #lighting of the plane
+                dist_light = norm(diffVect(planeVert,light_pos ))
+                l = Normalize(diffVect(planeVert,light_pos ))
+                viewVect = Normalize(diffVect(planeVert, vert_pos))
+                h = Normalize(addVect(l, viewVect))
+                colorP = multiVect(croi(BRDF(F0, [0, -1, 0], h, viewVect, l, roughness, white), [intensité_lum*255/(dist_light)**2]*3),scalaire(n,l))
+                colorplan = [min(255, color[i]) for i in range(3)]
+
+                #reflection
+                dist_light = norm(diffVect(vert_pos,planeVert ))
+                l = multiVect(Normalize(diffVect(vert_pos,planeVert )), -1)
+                viewVect = multiVect(Normalize(diffVect(vert_pos, c)), -1)
+                h = Normalize(addVect(l, viewVect))
+                color = multiVect(croi(BRDF(F0, n, h, viewVect, l, roughness, indigo), [intensité_lum*i/(dist_light)**2 for i in colorplan]),scalaire(n,l))#intensité_lum*i/(dist_light)**2
+                colorReflechi = [min(255, color[i]) for i in range(3)]
+
+
+            finalColor = addVect(colorSphere, colorReflechi)#linearInterpolation(colorSphere, colorReflechi, t)
+            finalColor = [min(255, i) for i in finalColor]
+
+
+
+
+            screen.set_at((i, j), finalColor)
 
         
 
