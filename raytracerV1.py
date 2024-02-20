@@ -1,7 +1,7 @@
 import pygame
 
 
-from math import sqrt, pi
+from math import sqrt, pi, ceil
 
 white = (255, 255, 255)
 black = (0, 0, 0)
@@ -102,13 +102,16 @@ def BRDF(F0, N, H, V, L, roughness, c):
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
-c = [0, 0, -1000]
-F0 = [0.9]*3
+c = [0, 0, -1300]
+F0 = [0.2]*3
 r=300
 roughness = 0.1
-intensité_lum = 16000
-light_pos = multiVect(Normalize([0, -1/12, -1]), 600)
+intensité_lum = 12000
+light_pos = multiVect(Normalize([1, -1, -1]), 900)
 hauteur =  r+20
+
+F0plane = [0.2]*3
+roughnessPlane = 0.9
 for i in range(WIDTH):
     for j in range(HEIGHT):
         dir = Normalize([i - WIDTH/2, j - HEIGHT/2, -500-c[2]])
@@ -128,7 +131,7 @@ for i in range(WIDTH):
                 #calcul reflection
                 s = isInsideSphere(planInterRay[1], [dir[0], -dir[1], dir[2]], r)
                 if s[0]:
-                    vert_pos_sphere = [c[0] + s[1]*dir[0], c[1] + s[1]*dir[1], -s[1]*dir[2]]
+                    vert_pos_sphere = [c[0] + s[1]*dir[0], c[1] + s[1]*dir[1], c[2] + s[1]*dir[2]]
                     n = Normalize(vert_pos_sphere)
                     vert_pos = multiVect(n, r)
                     dist_light = norm(diffVect(vert_pos_sphere,light_pos ))
@@ -137,6 +140,14 @@ for i in range(WIDTH):
                     h = Normalize(addVect(l, viewVect))
                     color = multiVect(croi(BRDF(F0, n, h, viewVect, l, roughness, indigo), [intensité_lum*255/(dist_light)**2]*3),scalaire(n,l))
                     colorTest = [min(255, color[i]) for i in range(3)]
+                    
+                    n = [0, -1, 0]
+                    dist_light = norm(diffVect(vert_pos_sphere, vert_pos))
+                    l = Normalize(diffVect(vert_pos, vert_pos_sphere))
+                    viewVect = Normalize(diffVect(vert_pos, c))
+                    h = Normalize(addVect(l, viewVect))
+                    colorTest = multiVect(croi(BRDF(F0plane, n, h, viewVect, l, roughnessPlane, indigo), [i/(dist_light)**2 for i in colorTest]*3),scalaire(n,l))
+                    
                 #colorTest = indigo
                 
                 #vcDotvp = scalaire(Normalize(diffVect(vert_pos, c)),Normalize(diffVect( vert_pos,p)))
@@ -152,18 +163,20 @@ for i in range(WIDTH):
                 l = Normalize(diffVect(vert_pos,light_pos ))
                 viewVect = Normalize(diffVect(vert_pos, c))
                 h = Normalize(addVect(l, viewVect))
-                color = multiVect(croi(BRDF(F0, n, h, viewVect, l, roughness, white), [intensité_lum*255/(dist_light)**2]*3),scalaire(n,l))
+                color = multiVect(croi(BRDF(F0plane, n, h, viewVect, l, roughnessPlane, white), [intensité_lum*255/(dist_light)**2]*3),scalaire(n,l))
                 color = [min(255, color[i]) for i in range(3)]
 
+                
+                
                 screen.set_at((i, j), [min(255, i) for i in addVect(color, colorTest)])
 
 
         #sphere rendering
         s = isInsideSphere(c, dir, r)
         if s[0] :
-            vert_pos = [c[0] + s[1]*dir[0], c[1] + s[1]*dir[1], -s[1]*dir[2]]
+            vert_pos = [c[0] + s[1]*dir[0], c[1] + s[1]*dir[1], c[2] + s[1]*dir[2]]
             n = Normalize(vert_pos)
-            vert_pos = multiVect(n, r)
+            
             dist_light = norm(diffVect(vert_pos,light_pos ))
             l = Normalize(diffVect(vert_pos,light_pos ))
             viewVect = Normalize(diffVect(vert_pos, c))
@@ -171,6 +184,7 @@ for i in range(WIDTH):
             color = multiVect(croi(BRDF(F0, n, h, viewVect, l, roughness, indigo), [intensité_lum*255/(dist_light)**2]*3),scalaire(n,l))
             colorSphere = [min(255, color[i]) for i in range(3)]
 
+            
             rayon_reflechi = Normalize(sym(dir, n))
             insidePlane = isInsidePlane(vert_pos, rayon_reflechi, hauteur)
             planeVert = insidePlane[1]

@@ -61,10 +61,10 @@ for i in range(WIDTH):
         r=300
         s = isInside([0, 0, -1300], dir, r)
         if s[0] :
-            v = [c[0] + s[1]*dir[0], c[1] + s[1]*dir[1], -s[1]*dir[2]]
+            v = [c[i] + s[1]*dir[i] for i in range(3)]
             n = Normalize(v)
             v = multiVect(n, r)
-            l = Normalize(diffVect(v,multiVect(Normalize([1/8, 0,-1]), r + 40) ))
+            l = Normalize(diffVect(v,multiVect(Normalize([1, -1,-1]), 600) ))
             cam = Normalize(diffVect(v, c))
             h = Normalize(addVect(l, cam))
             spe = scalaire(n, h)**100
