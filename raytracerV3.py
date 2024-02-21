@@ -12,6 +12,8 @@ red = (255, 0, 0)
 jaune = (255, 200, 0)
 WIDTH, HEIGHT = 300, 300
 
+res = 3
+
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 c = [0, 0, -1300]
@@ -73,7 +75,7 @@ class light:
         self.int = intensite
         self.pos = pos
 
-plan = quad(85, 4000, jaune, [0.4]*3, 0.1, False, 1)
+plan = quad(85, 4000, jaune, [0.9]*3, 0.1, False, 1)
 plan2 = quad(-200, 200, white, [0.4]*3, 0.1, True, 50)
 sphere1 = sphere([145, 0, 0], 80, indigo, [0.999]*3, 0.1, False, 0)
 sphere2 = sphere([-145, 0, -0], 50, red, [0.99]*3, 0.1, False, 0)
@@ -124,12 +126,15 @@ def rqytrqcing(camera_pos, d, sample):
         
     
     
-for i in range(WIDTH):
-    for j in range(HEIGHT):
-        dir = Normalize([i - WIDTH/2, j - HEIGHT/2, -500-c[2]])
-        color = rqytrqcing(c, dir, 30)
+for i in range(WIDTH//res):
+    for j in range(HEIGHT//res):
+        dir = Normalize([i*res - WIDTH/2, j*res - HEIGHT/2, -500-c[2]])
+        color = rqytrqcing(c, dir, 100)
         
-        if norm(color) : screen.set_at((i,j), [max(0, min(i,255)) for i in color])
+        if norm(color) : 
+            for k in range(res):
+                for l in range(res):
+                    screen.set_at((i*res + k,j*res + l), [max(0, min(i,255)) for i in color])
         
     
 
