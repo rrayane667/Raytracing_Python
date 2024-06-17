@@ -1,7 +1,7 @@
 from util import *
 import pygame
 import random as rd
-from math import cos, sin, sqrt, acos
+from math import cos, sin, sqrt, acos, atan
 import numpy as np
 import sys
 
@@ -28,7 +28,7 @@ class sphere(objects_):
         return False
 
     def getNormal(self, vertice):
-        return Normalize(diffVect( vertice, self.position))
+        return Normalize(diffVect( self.position, vertice))
 
     def getCoord(self, dir ,c):
         return [c[0] + self.step*dir[0], c[1] + self.step*dir[1], c[2] + self.step*dir[2]], self.step
@@ -84,7 +84,7 @@ class raytracing:
         return vert, index
     
     def ray_recu(self, depth, origine, direction, vert, index):
-        if self.hierarchy[index].isEmissive : return [self.hierarchy[index].emissionIntensity]*3
+        if self.hierarchy[index].isEmissive : return [self.hierarchy[index].emissionIntensity*i for i in self.hierarchy[index].base_color]
 
             #gets the normal vector at the position of the vertex
         n = self.hierarchy[index].getNormal(vert)
@@ -102,9 +102,17 @@ class raytracing:
 
         for _ in range(self.echantillon):
             current_color = (0,0,0)
-            #choosing r and theta (polar coordinates) using uniformly distributed values doesnt produce uniformly distributed vectors in space, needs rework
-            theta = rd.uniform(0, 2*pi); phi = direction[2]; z = rd.uniform(phi, 1) # coordonnée sphérique vecteur unitaire
-            new_direction = Normalize(multiVect(addVect([sqrt(1-z**2)*cos(theta), sqrt(1-z**2)*sin(theta), z],vert), 1))
+            
+            zeta = rd.uniform(0, 2*pi); r = sqrt(rd.uniform(0, 1))
+            
+            if n[0] != 0 and n[2] != 0 :
+                #phi = arctan(n[1], n[2], n[0], n[1]); 
+                psi = arctan(n[1], n[0],n[0])
+                theta = atan(sqrt(n[0]**2 + n[1]**2)/n[2]) #arctan(sqrt(n[0]**2 + n[1]**2), n[2], n[2])
+                #new_direction = (r*cos(zeta)*cos(theta)*cos(psi)-r*sin(zeta)*cos(theta)*sin(psi) - sqrt(1-r**2)*sin(theta), r*cos(phi)*sin(psi)*cos(zeta)+r*sin(zeta)*(cos(phi)*cos(psi)-sin(phi)*sin(psi)*sin(phi))+sqrt(1-r**2)*cos(theta)*sin(phi), r*cos(zeta)*(cos(phi)*cos(psi)*sin(theta) - sin(phi)*sin(psi))-r*sin(zeta)*(sin(phi)*cos(psi) + cos(phi)*sin(theta)*sin(psi)) + sqrt(1-r**2)*cos(theta)*cos(phi))
+                new_direction = (r*cos(zeta)*cos(theta)*cos(psi) - r*sin(zeta)*cos(theta)*sin(psi)-sin(theta)*sqrt(1-r**2), r*cos(zeta)*sin(psi)+r*sin(zeta)+r*sin(zeta)*cos(psi),r*cos(zeta)*cos(psi)*sin(theta)-r*sin(psi)*sin(theta)*sin(zeta)+cos(theta)*sqrt(1-r**2))
+            else: new_direction = (r*cos(zeta), r*sin(zeta), sqrt(1-r**2))
+            
             new_vert, new_index = self.rayshooter(new_direction, vert)
             if new_vert: 
                 new_l = Normalize(diffVect(vert, new_vert))
@@ -144,29 +152,36 @@ black = (0, 0, 0)
 indigo = (75/255,0,130/255)
 red = (1, 0, 0)
 jaune = (1, 200/255, 0)
+vert = (0,1,0)
+bleu_ciel = (0,1,1)
 WIDTH, HEIGHT = 500, 500
 running = True
 camera = [0, 0, -1300]
 
-sphere1 = sphere([145, 0, -300], white, True, 1, [0.9]*3, 0.1, 80)
-sphere2 = sphere([-145, 0, 0], indigo, False, 1, [0.7]*3, 0.4, 120)
-sphere3 = sphere((0, 10000.0, 0.0), jaune, False, 1, [0.5]*3, 0.5, 9800)
-sphere4 = sphere((10000, 0, 0.0), red, False, 1, [0.5]*3, 0.5, 9780)
-sphere5 = sphere((-10000, 0, 0.0), red, False, 1, [0.5]*3, 0.5, 9740)
-sphere6 = sphere((0, -10000.0, 0.0), white, False, 1, [0.5]*3, 0.5, 9850)
+sphere1 = sphere([145, 0, -300], white, False, 0, [0.9]*3, 0.1, 80)
+sphere2 = sphere([-145, 0, 0], indigo, False, 0, [0.1]*3, 0.9, 120)
+sphere3 = sphere((0, 10000.0, 0.0), vert, True, 1, [0.5]*3, 0.5, 9800)
+sphere4 = sphere((10000, 0, 0.0), bleu_ciel, True, 1, [0.7]*3, 0.2, 9780)
+sphere5 = sphere((-10000, 0, 0.0), red, True, 1, [0.2]*3, 0.5, 9740)
+sphere6 = sphere((0, -10000.0, 0.0), white, False, 0, [0.5]*3, 0.9, 9800)
+sphere6 = sphere((0, 0, 10000.0), white, False, 0, [0.5]*3, 0.9, 9850)
+sphere7 = sphere([20, 0, 50], white, True, 1, [0.9]*3, 0.1, 20)
+sphere8 = sphere((0, 0, -12400.0), white, True, 0, [0.8]*3, 0.2, 9850)
 
-res = 10
+res = 1
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 piksels = [[(0,0,0) for _ in range(WIDTH)] for _ in range(HEIGHT)]
 
-raytracer = raytracing(piksels, res, camera, 1, 100, WIDTH, HEIGHT)
+raytracer = raytracing(piksels, res, camera, 2, 50, WIDTH, HEIGHT)
 
-raytracer.add_object(sphere1)
-raytracer.add_object(sphere2)
-raytracer.add_object(sphere3)
-raytracer.add_object(sphere4)
-raytracer.add_object(sphere5)
+raytracer.add_object(sphere1) 
+raytracer.add_object(sphere2) 
+raytracer.add_object(sphere3) 
+raytracer.add_object(sphere4) 
+raytracer.add_object(sphere5) 
 raytracer.add_object(sphere6)
+#raytracer.add_object(sphere7)
+
 
 piksels = np.array(raytracer.raytracer())
 

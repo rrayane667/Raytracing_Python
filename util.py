@@ -1,10 +1,14 @@
-from math import sqrt, pi
+from math import sqrt, pi, atan
 def Normalize(u):
     r = sqrt(u[0]**2 + u[1]**2 + u[2]**2)
     if not r: return u
     return [u[0]/r, u[1]/r, u[2]/r]
 
-def scalaire(v, u): return max(0,-u[0]*v[0] - u[1]*v[1] - u[2]*v[2])
+def arctan(fo9, t7t, lecos):
+    if lecos>0 : return atan(fo9/t7t)
+    return pi + atan(fo9/t7t)
+
+def scalaire(v, u): return max(0,u[0]*v[0] + u[1]*v[1] + u[2]*v[2])
 
 def diffVect(v, u):
     return [u[0]-v[0], u[1]-v[1], u[2]-v[2]]
