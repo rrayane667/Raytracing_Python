@@ -4,7 +4,7 @@ def Normalize(u):
     if not r: return u
     return [u[0]/r, u[1]/r, u[2]/r]
 
-def scalaire(v, u): return max(0,u[0]*v[0] + u[1]*v[1] + u[2]*v[2])
+def scalaire(v, u): return max(0,-u[0]*v[0] - u[1]*v[1] - u[2]*v[2])
 
 def diffVect(v, u):
     return [u[0]-v[0], u[1]-v[1], u[2]-v[2]]
