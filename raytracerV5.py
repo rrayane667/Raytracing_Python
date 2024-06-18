@@ -8,7 +8,7 @@ import sys
 sys.setrecursionlimit(2056)
 
 class objects_:
-    def __init__(self,position, base_color, isEmissive, emissionIntensity, F0, roughness) -> None:
+    def __init__(self,position, base_color, isEmissive, emissionIntensity, F0, roughness, scale, name, subdivision) -> None:
         self.position = position
         self.base_color = base_color
         self.isEmissive = isEmissive
@@ -18,9 +18,9 @@ class objects_:
         self.step = 0
 
 class sphere(objects_):
-    def __init__(self, position, base_color, isEmissive, emissionIntensity, F0, roughness, radius) -> None:
-        self.radius = radius
-        super().__init__(position, base_color, isEmissive, emissionIntensity, F0, roughness)
+    def __init__(self, position, base_color, isEmissive, emissionIntensity, F0, roughness, scale, subdivision) -> None:
+        self.coord = []
+        super().__init__(position, base_color, isEmissive, emissionIntensity, F0, roughness, scale, "Sphere", subdivision)
 
     def isInside(self, o, d):
         delta = sum([2*(o[i] - self.position[i])*d[i] for i in range(3)])**2 - 4*sum([i**2 for i in d])*(sum([(o[i] - self.position[i])**2 for i in range(3)]) - self.radius**2)
@@ -32,10 +32,19 @@ class sphere(objects_):
 
     def getCoord(self, dir ,c):
         return [c[0] + self.step*dir[0], c[1] + self.step*dir[1], c[2] + self.step*dir[2]], self.step
+    
+    def wireframe_coord(self):
+        for i in range(res):
+            for j in range(res):
+                x = self.scale*cos(2*pi*j/res)*sin(2*pi*i/res) + self.position[0]
+                y = self.scale*sin(2*pi*j/res)*sin(2*pi*i/res) + self.position[1]
+                z = self.scale*cos(2*pi*i/res) + self.position[2]
+                self.coord.append([x,y,z])
+
 
 
 class raytracing:
-    def __init__(self, pixels, resolution, camera, ray_depth, echantillon, width, height) -> None:
+    def __init__(self, pixels, resolution, camera, ray_depth, echantillon, width, height, dis_pix) -> None:
         #2D array containing the pixels
         self.pixels = pixels
         #array containing objects of the scene
@@ -56,6 +65,8 @@ class raytracing:
         self.depth = ray_depth
         #number of rays generated for each reflection
         self.echantillon = echantillon
+        #distance entre 2 pixel consecutif
+        self.dis_pix = dis_pix
 
     def updateScene(self):
         self.lights = [object_ for object_ in self.hierarchy if object_.isEmissive == True]
@@ -64,7 +75,10 @@ class raytracing:
     #adds object to the scene    
     def add_object(self, obj):
         self.hierarchy.append(obj)
-        self.selection = [obj]
+        self.selection = [-1]
+
+    def updateSelectionAttribute(self, position):
+        self.hierarchy[self.selection].position = position
     
     #send ray and calculate intersections
     def rayshooter(self, dir, origine):
@@ -135,7 +149,7 @@ class raytracing:
         
         for i in range(self.WIDTH//self.res):
             for j in range(self.HEIGHT//self.res):
-                dir = Normalize([i*self.res - self.WIDTH/2, j*self.res - self.HEIGHT/2, -500-self.camera[2]])
+                dir = Normalize([i*self.res*self.dis_pix - self.WIDTH*self.dis_pix/2, j*self.res*self.dis_pix - self.HEIGHT*self.dis_pix/2, -500-self.camera[2]])
                 vertice, indice = self.rayshooter(dir, self.camera)
                 color = (0,0,0)
                 if vertice :
@@ -160,19 +174,20 @@ camera = [0, 0, -1300]
 
 sphere1 = sphere([145, 0, -300], white, False, 0, [0.9]*3, 0.1, 80)
 sphere2 = sphere([-145, 0, 0], indigo, False, 0, [0.1]*3, 0.9, 120)
-sphere3 = sphere((0, 10000.0, 0.0), vert, True, 1, [0.5]*3, 0.5, 9800)
-sphere4 = sphere((10000, 0, 0.0), bleu_ciel, True, 1, [0.7]*3, 0.2, 9780)
-sphere5 = sphere((-10000, 0, 0.0), red, True, 1, [0.2]*3, 0.5, 9740)
+sphere3 = sphere((0, 10000.0, 0.0), white, False, 1, [0.5]*3, 0.5, 9800)
+sphere4 = sphere((10000, 0, 0.0), bleu_ciel, False, 1, [0.7]*3, 0.2, 9780)
+sphere5 = sphere((-10000, 0, 0.0), red, False, 1, [0.2]*3, 0.5, 9740)
 sphere6 = sphere((0, -10000.0, 0.0), white, False, 0, [0.5]*3, 0.9, 9800)
-sphere6 = sphere((0, 0, 10000.0), white, False, 0, [0.5]*3, 0.9, 9850)
+sphere6 = sphere((0, 0, 10000.0), white, True, 3, [0.5]*3, 0.9, 9850)
 sphere7 = sphere([20, 0, 50], white, True, 1, [0.9]*3, 0.1, 20)
 sphere8 = sphere((0, 0, -12400.0), white, True, 0, [0.8]*3, 0.2, 9850)
 
-res = 1
+res = 4
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 piksels = [[(0,0,0) for _ in range(WIDTH)] for _ in range(HEIGHT)]
+dis_pix = 1
 
-raytracer = raytracing(piksels, res, camera, 2, 50, WIDTH, HEIGHT)
+raytracer = raytracing(piksels, res, camera, 2, 10, WIDTH, HEIGHT, dis_pix)
 
 raytracer.add_object(sphere1) 
 raytracer.add_object(sphere2) 
