@@ -16,14 +16,15 @@ class objects_:
         self.F0 = F0
         self.roughness = roughness
         self.step = 0
+        self.scale = scale
 
 class sphere(objects_):
-    def __init__(self, position, base_color, isEmissive, emissionIntensity, F0, roughness, scale, subdivision) -> None:
+    def __init__(self, position, base_color, isEmissive, emissionIntensity, F0, roughness, scale, subdivision=0) -> None:
         self.coord = []
         super().__init__(position, base_color, isEmissive, emissionIntensity, F0, roughness, scale, "Sphere", subdivision)
 
     def isInside(self, o, d):
-        delta = sum([2*(o[i] - self.position[i])*d[i] for i in range(3)])**2 - 4*sum([i**2 for i in d])*(sum([(o[i] - self.position[i])**2 for i in range(3)]) - self.radius**2)
+        delta = sum([2*(o[i] - self.position[i])*d[i] for i in range(3)])**2 - 4*sum([i**2 for i in d])*(sum([(o[i] - self.position[i])**2 for i in range(3)]) - self.scale**2)
         if delta >=0: self.step = (-sum([2*(o[i] - self.position[i])*d[i] for i in range(3)]) - sqrt(delta))/(2*sum([i**2 for i in d])); return True
         return False
 
@@ -187,7 +188,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 piksels = [[(0,0,0) for _ in range(WIDTH)] for _ in range(HEIGHT)]
 dis_pix = 1
 
-raytracer = raytracing(piksels, res, camera, 2, 10, WIDTH, HEIGHT, dis_pix)
+raytracer = raytracing(piksels, res, camera, 0, 10, WIDTH, HEIGHT, dis_pix)
 
 raytracer.add_object(sphere1) 
 raytracer.add_object(sphere2) 
