@@ -17,9 +17,10 @@ class objects_:
         self.roughness = roughness
         self.step = 0
         self.scale = scale
+        self.subdivision = subdivision
 
 class sphere(objects_):
-    def __init__(self, position, base_color, isEmissive, emissionIntensity, F0, roughness, scale, subdivision=0) -> None:
+    def __init__(self, position, base_color, isEmissive, emissionIntensity, F0, roughness, scale, subdivision) -> None:
         self.coord = []
         super().__init__(position, base_color, isEmissive, emissionIntensity, F0, roughness, scale, "Sphere", subdivision)
 
@@ -35,12 +36,57 @@ class sphere(objects_):
         return [c[0] + self.step*dir[0], c[1] + self.step*dir[1], c[2] + self.step*dir[2]], self.step
     
     def wireframe_coord(self):
-        for i in range(res):
-            for j in range(res):
-                x = self.scale*cos(2*pi*j/res)*sin(2*pi*i/res) + self.position[0]
-                y = self.scale*sin(2*pi*j/res)*sin(2*pi*i/res) + self.position[1]
-                z = self.scale*cos(2*pi*i/res) + self.position[2]
+        for i in range(self.subdivision):
+            for j in range(self.subdivision):
+                x = self.scale*cos(2*pi*j/self.subdivision)*sin(2*pi*i/self.subdivision) + self.position[0]
+                y = self.scale*cos(2*pi*i/self.subdivision) + self.position[1]
+                z = self.scale*sin(2*pi*j/self.subdivision)*sin(2*pi*i/self.subdivision) + self.position[2]
                 self.coord.append([x,y,z])
+    def edges(self, v_index):
+        return [self.coord[v_index - self.subdivision], self.coord[v_index - 1]]
+
+class wireframe:
+    def __init__(self, camera_dist, screen, HEIGHT, WIDTH, camera) -> None:
+        self.camera_dist = camera_dist
+        self.screen = screen
+        self. hierarchy = []
+        self.HEIGHT = HEIGHT
+        self.WIDTH = WIDTH
+        self.camera = camera
+
+    def rayshooter(self, vertice, index):
+        self.hierarchy[index].isInside(self.camera, Normalize(diffVect(self.camera, vertice)))
+        object_step = self.hierarchy[index].step
+        for i, obj in enumerate(self.hierarchy):
+            if obj.isInside(self.camera, Normalize(diffVect(self.camera, vertice))) and i != index and obj.step < object_step:
+                return True
+        return False
+
+    def add_object(self, obj):
+        self.hierarchy.append(obj)
+
+    def igrec(self, z, y):
+        return(self.camera_dist*y/(z+self.camera_dist)+self.HEIGHT/2)
+
+    def ix(self, z, x):
+        return(self.camera_dist*x/(z+self.camera_dist)+self.WIDTH/2)
+    
+    def projection(self, v):
+        return (self.ix(v[2], v[0]), self.igrec(v[2], v[1]))
+    
+    def display(self):
+        counter = 0
+        for obj in self.hierarchy :
+            obj.wireframe_coord()
+            coord = obj.coord
+            for i in range(0,len(coord)):
+                normal = obj.getNormal(coord[i])
+                view_vector = Normalize(diffVect(coord[i], self.camera))
+                if i%obj.subdivision and scalaire(normal, view_vector) and not self.rayshooter(coord[i], counter):
+                    edges = obj.edges(i)
+                    for v in edges:
+                        pygame.draw.line(self.screen, [i*255 for i in obj.base_color], self.projection(coord[i]), self.projection(v))
+            counter += 1
 
 
 
@@ -171,17 +217,18 @@ vert = (0,1,0)
 bleu_ciel = (0,1,1)
 WIDTH, HEIGHT = 500, 500
 running = True
+isWireframe = True
 camera = [0, 0, -1300]
 
-sphere1 = sphere([145, 0, -300], white, False, 0, [0.9]*3, 0.1, 80)
-sphere2 = sphere([-145, 0, 0], indigo, False, 0, [0.1]*3, 0.9, 120)
-sphere3 = sphere((0, 10000.0, 0.0), white, False, 1, [0.5]*3, 0.5, 9800)
-sphere4 = sphere((10000, 0, 0.0), bleu_ciel, False, 1, [0.7]*3, 0.2, 9780)
-sphere5 = sphere((-10000, 0, 0.0), red, False, 1, [0.2]*3, 0.5, 9740)
-sphere6 = sphere((0, -10000.0, 0.0), white, False, 0, [0.5]*3, 0.9, 9800)
-sphere6 = sphere((0, 0, 10000.0), white, True, 3, [0.5]*3, 0.9, 9850)
-sphere7 = sphere([20, 0, 50], white, True, 1, [0.9]*3, 0.1, 20)
-sphere8 = sphere((0, 0, -12400.0), white, True, 0, [0.8]*3, 0.2, 9850)
+sphere1 = sphere([145, 0, -300], white, False, 0, [0.9]*3, 0.1, 80, 10)
+sphere2 = sphere([-145, 0, 0], indigo, False, 0, [0.1]*3, 0.9, 120, 10)
+sphere3 = sphere((0, 10000.0, 0.0), white, False, 1, [0.5]*3, 0.5, 9800, 50)
+sphere4 = sphere((10000, 0, 0.0), bleu_ciel, False, 1, [0.7]*3, 0.2, 9780, 50)
+sphere5 = sphere((-10000, 0, 0.0), red, False, 1, [0.2]*3, 0.5, 9740, 50)
+sphere6 = sphere((0, -10000.0, 0.0), white, False, 0, [0.5]*3, 0.9, 9800, 50)
+sphere6 = sphere((0, 0, 10000.0), white, True, 3, [0.5]*3, 0.9, 9850, 50)
+sphere7 = sphere([20, 0, 50], white, True, 1, [0.9]*3, 0.1, 20, 4)
+sphere8 = sphere((0, 0, -12400.0), white, True, 0, [0.8]*3, 0.2, 9850, 50)
 
 res = 4
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -189,6 +236,7 @@ piksels = [[(0,0,0) for _ in range(WIDTH)] for _ in range(HEIGHT)]
 dis_pix = 1
 
 raytracer = raytracing(piksels, res, camera, 0, 10, WIDTH, HEIGHT, dis_pix)
+wireframe_display = wireframe(abs(500 - camera[2]), screen, WIDTH, HEIGHT, camera)
 
 raytracer.add_object(sphere1) 
 raytracer.add_object(sphere2) 
@@ -198,16 +246,31 @@ raytracer.add_object(sphere5)
 raytracer.add_object(sphere6)
 #raytracer.add_object(sphere7)
 
+wireframe_display.add_object(sphere1) 
+wireframe_display.add_object(sphere2) 
+wireframe_display.add_object(sphere3) 
+wireframe_display.add_object(sphere4) 
+wireframe_display.add_object(sphere5) 
+wireframe_display.add_object(sphere6)
 
-piksels = np.array(raytracer.raytracer())
 
-pygame.surfarray.blit_array(screen, piksels)
 
 while running :
+
+    if isWireframe:
+        wireframe_display.display()
+    else:
+        piksels = np.array(raytracer.raytracer())
+
+        pygame.surfarray.blit_array(screen, piksels)
+
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.MOUSEBUTTONDOWN :
+            if event.button==1:
+                isWireframe = False
 
     pygame.display.update()
 pygame.quit()
